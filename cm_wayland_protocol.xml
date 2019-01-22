@@ -23,26 +23,26 @@
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
   </copyright>
-  
+
   <interface name="zcm_manager_v1" version="1">
       <description summary="Manager to get information from compositor and attach buffer to CM">
-          This interface is for the compositor to announce support for color managed surfaces. 
-          
+          This interface is for the compositor to announce support for color managed surfaces.
+
           If this interface is supported by the compositor any surface that doesn't use this profile is to be assumed to be in sRGB irregardless of buffer size.
-          
+
           Surface that do use this protocol can either be in a compositor supported color space in which case the compositor is responsible for rendering to the final display space in this first case there is no guarantee to accuracy since the compositor is allowed to use an intermediate compositing color space in this case. The second option is to render directly to a display color space using this protocol the query what that is, in this case accuracy will be guaranteed for the primary display, the compositor should make a best effort to also show mostly correct colors on any secondary displays the surface is visible off but no guarantee to accuracy shall be given.
-          
+
           In the context of this protocol primary display means the main display the surface is visible on and secondary display means any display the surface is also visible on (either because the primary display is mirrored or the surface is split between two screens), it is the compositors task to determine what the primary display of a surface is - potentially with the help of user configuration - and sent the right events might this change.
-          
+
           THIS INTERFACE IS EXPERIMENTAL!
       </description>
-      
+
       <request name="destroy" type="destructor">
         <description summary="destroy the idle inhibitor object">
             Destroy the cm manager.
         </description>
       </request>
-      
+
       <request name="cm_surface">
           <description summary="Make surface color managed">
               Make a surface color managed
@@ -50,63 +50,63 @@
           <arg name="id" type="new_id" interface="zcm_surface_v1" />
           <arg name="surface" type="object" interface="wl_surface" />
       </request>
-      
-      <request name="cm_request_color_spaces">
+
+      <request name="request_color_spaces">
           <description summary="Get supported color space from compositor">
               Clients can send this request to get a description of the color space supported by the compositor
           </description>
       </request>
-      
-      <event name="cm_supported_color_spaces">
+
+      <event name="supported_color_spaces">
           <description summary="A fd to a file provding information on supported profiles">
               A JSON file with a list of supported profiles the compositor can render, should also include the display profiles. Send either as a response to a cm_request_color_spaces or on change of information
-              
+
               The JSON file should include a tag that the compositor will use to identify color profiles, a description which may be a file location of an ICC profile or a set of primaries + curve information (this is needed since currently HDR can't be communicated via ICC profiles) and potentially a common name for programs to identify common color spaces.
           </description>
-          
-          <arg name="cm_config" type="fd" summary="JSON cm configuration fd" />
+
+          <arg name="config" type="fd" summary="JSON cm configuration fd" />
       </event>
-      
+
   </interface>
- 
-  
+
+
   <interface name="zcm_surface_v1" version="1">
       <description summary="Interface for color managed surface">
           With this interface the surface can set its color tags as defined in the JSON configuration. It can also use this to get the tag of the primary output.
-          
+
           If a surface uses a tag that is the same as its primary output the surface must be blended as late as possible before output to display. Otherwise the compositor is allowed to use an intermediate compositing space.
       </description>
-      
-      <request name="cm_set_color_space">
+
+      <request name="set_color_space">
           <description summary="Set color space">
               Set the color space for the attache surface
           </description>
-          <arg name="cm_cp_tag" type="string" summary="Color space tag as defined in cm config" />
+          <arg name="cp_tag" type="string" summary="Color space tag as defined in cm config" />
       </request>
-      
-      <request name="cm_get_primary_display">
+
+      <request name="get_primary_display">
           <description summary="Get primary display tag">
               Request to get primary display tag.
           </description>
       </request>
-      
-      <event name="cm_primary_display">
+
+      <event name="primary_display">
           <description summary="Current primary display of surface">
               The current primary display of the surface, can either be sent as response to a cm_get_primary_display or when primary display changes although in that case only when surface was rendering to previous primary display.
           </description>
-          <arg name="cm_primary_display_tag" type="string" summary="primary display tag" />
+          <arg name="primary_display_cp_tag" type="string" summary="primary display tag" />
       </event>
-      
-      <request name="cm_set_secondary_surface">
+
+      <request name="set_secondary_surface">
           <description summary="To assist the compositor in rendering to secondary screens">
               A secondary buffer can be set to assist a compositor when dealing with secondary screens or complex compositing tasks.
-              
+
               This surface must be the same size as the primary surface, must not already be attached to a cm_surface object and cm_tag must not be a display tag.
           </description>
           <arg name="surface" type="object" interface="wl_surface" summary="Secondary surface" />
-          <arg name="cm_tag" type="string" summary="Color space tag for secondart surface"/>
+          <arg name="cp_tag" type="string" summary="Color space tag for secondart surface"/>
       </request>
-      
+
   </interface>
-  
+
 </protocol>
