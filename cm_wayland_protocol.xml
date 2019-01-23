@@ -55,20 +55,69 @@
           <description summary="Get supported color space from compositor">
               Clients can send this request to get a description of the color space supported by the compositor
           </description>
+          <arg name="id" type="new_id" interface="zcm_color_space_config_v1" />
       </request>
-
-      <event name="supported_color_spaces">
-          <description summary="A fd to a file provding information on supported profiles">
-              A JSON file with a list of supported profiles the compositor can render, should also include the display profiles. Send either as a response to a cm_request_color_spaces or on change of information
-
-              The JSON file should include a tag that the compositor will use to identify color profiles, a description which may be a file location of an ICC profile or a set of primaries + curve information (this is needed since currently HDR can't be communicated via ICC profiles) and potentially a common name for programs to identify common color spaces.
-          </description>
-
-          <arg name="config" type="fd" summary="JSON cm configuration fd" />
-      </event>
 
   </interface>
 
+  <interface name="zcm_color_space_config_v1" version="1">
+    <description summary="Get supported color spaces from compositor">
+      With this interface it is possible to request the suported color spaces from the compositor. When acquring this interface the compositor will fire off one event per supported color space and finish with a done event. In the event a color space changes (for example after a display has been profiled) it will fire off a new event.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the idle inhibitor object">
+          Destroy the color space config object.
+      </description>
+    </request>
+
+    <event name="done">
+      <description summary="Finished iterating over color spaces">
+        Fired when finished first time
+      </description>
+    </event>
+
+    <enum name="color_space">
+      <description summary="One of the standard color spaces">
+        This enum list the standard color spaces that a compositor can support do note a compositor is not guaranteed to support all of them
+      </description>
+      <entry name="sRGB" value="1" summary="sRGB color space" />
+      <entry name="adobeRGB" value="2" summary="Adobe RGB" />
+      <entry name="DCI-3P" value="3" summary="DCI-3P" />
+      <entry name="rec2020" vallue="4" summary="rec2020" />
+      <entry name="rec2020-pq" value="5" summary="rec2020 with pq curve (HDR)" />
+      <entry name="rec2020-hlg" value="6" summary="rec2020 with HLG curve (HDR)" />
+    </enum>
+
+    <event name="color_space_standard">
+      <description summary="event for one of the standard color spaces (see color_space_enum)">
+        Fired for a standard color spaces supported by compositor
+      </description>
+      <arg name="cp_tag" type="uint" summary="Color space tag" />
+      <arg name="is_display" type="uint" summary="Not 0 if display" />
+      <arg name="color_space" type="uint" enum="color_space" summary="supported standard color space"/>
+    </event>
+
+    <event name="color_space_icc">
+      <description summary="Event for ICC color space">
+        Event fired for color spaces described by ICC profile, mostly used for displays
+      </description>
+      <arg name="cp_tag" type="uint" summary="Color space tag" />
+      <arg name="is_display" type="uint" summary="Not 0 if display" />
+      <arg name="Profile" type="fd" summary="File descriptor to ICC profile" />
+    </event>
+
+    <event name="color_space_non_icc">
+      <description summary="Event for non standard non ICC space">
+        Event fired for non ICC non Standard interface; will mostly be used for HDR displays
+        note format of profile information is sitll be decided!
+      </description>
+      <arg name="cp_tag" type="uint" summary="Color space tag" />
+      <arg name="is_display" type="uint" summary="Not 0 if display" />
+      <arg name="Profile" type="fd" summary="File descriptor to HDR? profile" />
+    </event>
+
+  </interface>
 
   <interface name="zcm_surface_v1" version="1">
       <description summary="Interface for color managed surface">
@@ -81,7 +130,7 @@
           <description summary="Set color space">
               Set the color space for the attache surface
           </description>
-          <arg name="cp_tag" type="string" summary="Color space tag as defined in cm config" />
+          <arg name="cp_tag" type="uint" summary="Color space tag as defined in cm config" />
       </request>
 
       <request name="get_primary_display">
@@ -94,7 +143,7 @@
           <description summary="Current primary display of surface">
               The current primary display of the surface, can either be sent as response to a cm_get_primary_display or when primary display changes although in that case only when surface was rendering to previous primary display.
           </description>
-          <arg name="primary_display_cp_tag" type="string" summary="primary display tag" />
+          <arg name="primary_display_cp_tag" type="uint" summary="primary display tag" />
       </event>
 
       <request name="set_secondary_surface">
@@ -104,7 +153,7 @@
               This surface must be the same size as the primary surface, must not already be attached to a cm_surface object and cm_tag must not be a display tag.
           </description>
           <arg name="surface" type="object" interface="wl_surface" summary="Secondary surface" />
-          <arg name="cp_tag" type="string" summary="Color space tag for secondart surface"/>
+          <arg name="cp_tag" type="uint" summary="Color space tag for secondart surface"/>
       </request>
 
   </interface>
