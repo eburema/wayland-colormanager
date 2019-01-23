@@ -156,6 +156,12 @@
           <arg name="cp_tag" type="uint" summary="Color space tag for secondart surface"/>
       </request>
 
+      <request name="remove_secondary_surface">
+        <description summary="Remove a secondary surface from color manager">
+          Removes and added secondary surface
+        </description>
+      </request>
+
   </interface>
 
 </protocol>
