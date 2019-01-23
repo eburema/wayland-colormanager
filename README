@@ -1,0 +1,2 @@
+Proposal for CM protocol in wayland
+If a compositor implements this they also should implement a tbd dbus protocol for configuration opperations
