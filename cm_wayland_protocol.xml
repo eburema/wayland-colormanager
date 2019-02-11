@@ -51,31 +51,41 @@
           <arg name="surface" type="object" interface="wl_surface" />
       </request>
 
-      <request name="request_color_spaces">
+      <request name="supported_color_spaces">
           <description summary="Get supported color space from compositor">
-              Clients can send this request to get a description of the color space supported by the compositor
+              Clients can send this request to get a description of the standard color space supported by the compositor
           </description>
           <arg name="id" type="new_id" interface="zcm_color_space_config_v1" />
       </request>
 
+      <request name="color_space_from_icc">
+        <description summary="Create a color space from ICC profile">
+        </description>
+        <arg name="id" type="new_id" interface="zcm_color_space_v1"  summary="id for new color space"/>
+        <arg name="profile" type="fd" summary="fd to icc profile" />
+      </request>
+
+      <request name="color_space_from_non_icc">
+        <description summary="Create a color space from HDR profile">
+        </description>
+        <arg name="id" type="new_id" interface="zcm_color_space_v1"  summary="id for new color space"/>
+        <arg name="profile" type="fd" summary="fd to non-ICC/HDR profile" />
+      </request>
+
+      <request name="color_space_from_display">
+        <description summary="create a color space for a display tag">
+          There are a few reasons a uint is used here, the first being that it currently is unkown if wl_output maps to one display and one display only the second being that this potentially needs to be communicated to a protocol outside of wayland (e.g. via dbus) for calibration and profiling purposes.
+        </description>
+        <arg name="id" type="new_id" interface="zcm_color_space_v1"  summary="id for new color space"/>
+        <arg name="display_tag" type="uint" summary="display tag" />
+      </request>
+
   </interface>
 
-  <interface name="zcm_color_space_config_v1" version="1">
-    <description summary="Get supported color spaces from compositor">
-      With this interface it is possible to request the suported color spaces from the compositor. When acquring this interface the compositor will fire off one event per supported color space and finish with a done event. In the event a color space changes (for example after a display has been profiled) it will fire off a new event.
+  <interface name="zcm_color_space_v1" version="1">
+    <description summary="Interface to describe a color space">
+        The color space interface used to query the capabilties of the color space
     </description>
-
-    <request name="destroy" type="destructor">
-      <description summary="destroy the idle inhibitor object">
-          Destroy the color space config object.
-      </description>
-    </request>
-
-    <event name="done">
-      <description summary="Finished iterating over color spaces">
-        Fired when finished first time
-      </description>
-    </event>
 
     <enum name="color_space">
       <description summary="One of the standard color spaces">
@@ -88,6 +98,12 @@
       <entry name="rec2020-pq" value="5" summary="rec2020 with pq curve (HDR)" />
       <entry name="rec2020-hlg" value="6" summary="rec2020 with HLG curve (HDR)" />
     </enum>
+
+    <request name="color_space_info">
+        <description summary="Get supported color space from compositor">
+            To get the color space info, comopsitor will reply with one of the below events
+        </description>
+    </request>
 
     <event name="color_space_standard">
       <description summary="event for one of the standard color spaces (see color_space_enum)">
@@ -116,6 +132,31 @@
       <arg name="is_display" type="uint" summary="Not 0 if display" />
       <arg name="Profile" type="fd" summary="File descriptor to HDR? profile" />
     </event>
+  </interface>
+
+  <interface name="zcm_color_space_config_v1" version="1">
+    <description summary="Get supported color spaces from compositor">
+      With this interface it is possible to request the standard suported color spaces from the compositor. When acquring this interface the compositor will fire off one event per supported color space and finish with a done event. In the event a color space changes (for example after a display has been profiled) it will fire off a new event.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="destroy the idle inhibitor object">
+          Destroy the color space config object.
+      </description>
+    </request>
+
+    <event name="done">
+      <description summary="Finished iterating over color spaces">
+        Fired when finished first time
+      </description>
+    </event>
+
+    <event name="color_space">
+      <description summary="Fired for every supported standard color space">
+        For every supported standard color space (see enum in zcm_color_space_v1) one color_space event will be fired
+      </description>
+      <arg name="cp_tag" type="object" interface="zcm_color_space_v1" />
+    </event>
 
   </interface>
 
@@ -130,7 +171,7 @@
           <description summary="Set color space">
               Set the color space for the attache surface
           </description>
-          <arg name="cp_tag" type="uint" summary="Color space tag as defined in cm config" />
+          <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="Color space tag as defined in cm config" />
       </request>
 
       <request name="get_primary_display">
@@ -143,7 +184,7 @@
           <description summary="Current primary display of surface">
               The current primary display of the surface, can either be sent as response to a cm_get_primary_display or when primary display changes although in that case only when surface was rendering to previous primary display.
           </description>
-          <arg name="primary_display_cp_tag" type="uint" summary="primary display tag" />
+          <arg name="primary_display_tag" type="uint" summary="primary display tag" />
       </event>
 
       <request name="set_secondary_surface">
@@ -153,7 +194,7 @@
               This surface must be the same size as the primary surface, must not already be attached to a cm_surface object and cm_tag must not be a display tag.
           </description>
           <arg name="surface" type="object" interface="wl_surface" summary="Secondary surface" />
-          <arg name="cp_tag" type="uint" summary="Color space tag for secondart surface"/>
+          <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="Color space tag for secondart surface"/>
       </request>
 
       <request name="remove_secondary_surface">
