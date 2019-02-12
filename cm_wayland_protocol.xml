@@ -167,11 +167,22 @@
           If a surface uses a tag that is the same as its primary output the surface must be blended as late as possible before output to display. Otherwise the compositor is allowed to use an intermediate compositing space.
       </description>
 
+      <enum name="render_intent">
+        <description summary="ICC render intent">
+          ICC render intents
+        </description>
+        <entry name="absolute" value="1"/>
+        <entry name="relative" value="2"/>
+        <entry name="perceptual" value="3"/>
+        <entry name="saturation" value="4" />
+      </enum>
+
       <request name="set_color_space">
           <description summary="Set color space">
               Set the color space for the attache surface
           </description>
           <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="Color space tag as defined in cm config" />
+          <arg name="render_intent" type="uint" enum="render_intent" summary="ICC render intent" />
       </request>
 
       <request name="get_primary_display">
@@ -195,6 +206,7 @@
           </description>
           <arg name="surface" type="object" interface="wl_surface" summary="Secondary surface" />
           <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="Color space tag for secondart surface"/>
+          <arg name="render_intent" type="uint" enum="render_intent" summary="ICC render intent" />
       </request>
 
       <request name="remove_secondary_surface">
