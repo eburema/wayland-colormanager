@@ -65,26 +65,65 @@
         <arg name="profile" type="fd" summary="fd to icc profile" />
       </request>
 
-      <request name="color_space_from_non_icc">
-        <description summary="Create a color space from HDR profile">
+      <request name="get_cm_output">
+        <description summary="Turn a wl_output in a cm_output">
+          Extends a wl_output with color mangement information
         </description>
-        <arg name="id" type="new_id" interface="zcm_color_space_v1"  summary="id for new color space"/>
-        <arg name="profile" type="fd" summary="fd to non-ICC/HDR profile" />
-      </request>
-
-      <request name="color_space_from_display">
-        <description summary="create a color space for a display tag">
-          There are a few reasons a uint is used here, the first being that it currently is unkown if wl_output maps to one display and one display only the second being that this potentially needs to be communicated to a protocol outside of wayland (e.g. via dbus) for calibration and profiling purposes.
-        </description>
-        <arg name="id" type="new_id" interface="zcm_color_space_v1"  summary="id for new color space"/>
-        <arg name="display_tag" type="uint" summary="display tag" />
+        <arg name="id" type="new_id" interface="zcm_output_v1"  summary="id for new color space"/>
+        <arg name="output" type="objet" interface="wl_output" summary="display tag" />
       </request>
 
   </interface>
 
+  <interface name="zcm_output_v1" version="1">
+    <description summary="Interface extending wl_output with CM info">
+      This interface is intended to extend the wl_output with needed color management information
+
+      If no hdr_on event gets sent assume HDR to be off
+    </description>
+
+    <event name="color_space">
+      <description summary="color space of output">
+        Will fire on creation and change of associated color profile
+      </description>
+      <arg name="cp" type="object" interface="zcm_color_space_v1" summary="color space object"/>
+    </evemt>
+
+    <event name="hdr_on">
+      <description summary="Event fired in case HDR is on or gets turned on"/>
+      <arg name="diffuse_white" type="uint" summary="Diffuse white in nits?" />
+      <arg name="specular white" type="uint" summary="specular white in nits?"/>
+    </event>
+
+    <event name="hdr_off">
+      <description summary="Event fired in case HDR gets turned off" />
+    </event>
+  </interface>
+
+
   <interface name="zcm_color_space_v1" version="1">
     <description summary="Interface to describe a color space">
         The color space interface used to query the capabilties of the color space
+    </description>
+
+    <request name="color_space_info">
+        <description summary="Get supported color space from compositor">
+            To get the color space info, comopsitor will reply with one of the below events
+        </description>
+    </request>
+
+    <event name="color_space_icc">
+      <description summary="Event for ICC color space">
+        Event fired for color spaces described by ICC profile, mostly used for displays
+      </description>
+      <arg name="Profile" type="fd" summary="File descriptor to ICC profile" />
+    </event>
+
+  </interface>
+
+  <interface name="zcm_color_space_config_v1" version="1">
+    <description summary="Get supported color spaces from compositor">
+      With this interface it is possible to request the standard suported color spaces from the compositor. When acquring this interface the compositor will fire off one event per supported color space and finish with a done event. In the event a color space changes (for example after a display has been profiled) it will fire off a new event.
     </description>
 
     <enum name="color_space">
@@ -98,46 +137,6 @@
       <entry name="rec2020-pq" value="5" summary="rec2020 with pq curve (HDR)" />
       <entry name="rec2020-hlg" value="6" summary="rec2020 with HLG curve (HDR)" />
     </enum>
-
-    <request name="color_space_info">
-        <description summary="Get supported color space from compositor">
-            To get the color space info, comopsitor will reply with one of the below events
-        </description>
-    </request>
-
-    <event name="color_space_standard">
-      <description summary="event for one of the standard color spaces (see color_space_enum)">
-        Fired for a standard color spaces supported by compositor
-      </description>
-      <arg name="cp_tag" type="uint" summary="Color space tag" />
-      <arg name="is_display" type="uint" summary="Not 0 if display" />
-      <arg name="color_space" type="uint" enum="color_space" summary="supported standard color space"/>
-    </event>
-
-    <event name="color_space_icc">
-      <description summary="Event for ICC color space">
-        Event fired for color spaces described by ICC profile, mostly used for displays
-      </description>
-      <arg name="cp_tag" type="uint" summary="Color space tag" />
-      <arg name="is_display" type="uint" summary="Not 0 if display" />
-      <arg name="Profile" type="fd" summary="File descriptor to ICC profile" />
-    </event>
-
-    <event name="color_space_non_icc">
-      <description summary="Event for non standard non ICC space">
-        Event fired for non ICC non Standard interface; will mostly be used for HDR displays
-        note format of profile information is sitll be decided!
-      </description>
-      <arg name="cp_tag" type="uint" summary="Color space tag" />
-      <arg name="is_display" type="uint" summary="Not 0 if display" />
-      <arg name="Profile" type="fd" summary="File descriptor to HDR? profile" />
-    </event>
-  </interface>
-
-  <interface name="zcm_color_space_config_v1" version="1">
-    <description summary="Get supported color spaces from compositor">
-      With this interface it is possible to request the standard suported color spaces from the compositor. When acquring this interface the compositor will fire off one event per supported color space and finish with a done event. In the event a color space changes (for example after a display has been profiled) it will fire off a new event.
-    </description>
 
     <request name="destroy" type="destructor">
       <description summary="destroy the idle inhibitor object">
@@ -155,7 +154,8 @@
       <description summary="Fired for every supported standard color space">
         For every supported standard color space (see enum in zcm_color_space_v1) one color_space event will be fired
       </description>
-      <arg name="cp_tag" type="object" interface="zcm_color_space_v1" />
+      <arg name="standard_id" type="uint" enum="color_space" summary="Which standard it is" />
+      <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="color space object"/>
     </event>
 
   </interface>
@@ -184,19 +184,6 @@
           <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="Color space tag as defined in cm config" />
           <arg name="render_intent" type="uint" enum="render_intent" summary="ICC render intent" />
       </request>
-
-      <request name="get_primary_display">
-          <description summary="Get primary display tag">
-              Request to get primary display tag.
-          </description>
-      </request>
-
-      <event name="primary_display">
-          <description summary="Current primary display of surface">
-              The current primary display of the surface, can either be sent as response to a cm_get_primary_display or when primary display changes although in that case only when surface was rendering to previous primary display.
-          </description>
-          <arg name="primary_display_tag" type="uint" summary="primary display tag" />
-      </event>
 
       <request name="set_secondary_surface">
           <description summary="To assist the compositor in rendering to secondary screens">
