@@ -82,11 +82,12 @@
       If no hdr_on event gets sent assume HDR to be off
     </description>
 
-    <event name="color_space">
+    <event name="color_info">
       <description summary="color space of output">
         Will fire on creation and change of associated color profile
       </description>
       <arg name="cp" type="object" interface="zcm_color_space_v1" summary="color space object"/>
+      <arg name="output_id" type="uint" summary="Display id for use with dbus configuration protocol" />
     </evemt>
 
     <event name="hdr_on">
@@ -152,7 +153,7 @@
 
     <event name="color_space">
       <description summary="Fired for every supported standard color space">
-        For every supported standard color space (see enum in zcm_color_space_v1) one color_space event will be fired
+        For every supported standard color space one color_space event will be fired
       </description>
       <arg name="standard_id" type="uint" enum="color_space" summary="Which standard it is" />
       <arg name="cp_tag" type="object" interface="zcm_color_space_v1" summary="color space object"/>
@@ -162,9 +163,7 @@
 
   <interface name="zcm_surface_v1" version="1">
       <description summary="Interface for color managed surface">
-          With this interface the surface can set its color tags as defined in the JSON configuration. It can also use this to get the tag of the primary output.
-
-          If a surface uses a tag that is the same as its primary output the surface must be blended as late as possible before output to display. Otherwise the compositor is allowed to use an intermediate compositing space.
+        Whit this interface a surface becomes color managed, if it sets a color space not associated with an output the compositor is allowed to use intermediate compositing buffers (although if not one of the standard not encouraged to do so). If the color space is the same as one of the outputs of the surface the compositor will need to composite directly into that output, it may try to render to any other output with the set intent.
       </description>
 
       <enum name="render_intent">
