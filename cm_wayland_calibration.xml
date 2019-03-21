@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="cm_calibrate__profile_unstable_v1">
+
+  <copyright>
+    Copyright © 2019 Erwin Burema
+
+    Permission is hereby granted, free of charge, to any person obtaining a
+    copy of this software and associated documentation files (the "Software"),
+    to deal in the Software without restriction, including without limitation
+    the rights to use, copy, modify, merge, publish, distribute, sublicense,
+    and/or sell copies of the Software, and to permit persons to whom the
+    Software is furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice (including the next
+    paragraph) shall be included in all copies or substantial portions of the
+    Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+  </copyright>
+
+  <interface name="zcm_calibration_manager_v1" version="1">
+      <description summary="Manager object for profiling/calibration of displays">
+          With this interface a compositor can announce calibration/profiling support so a software can calibrate the display
+
+          Currently this is just a sketch for a proposal
+
+          THIS INTERFACE IS EXPERIMENTAL!
+      </description>
+
+      <request name="destroy" type="destructor">
+        <description summary="destroy the calibration manager">
+            Destroy the calibration manager
+        </description>
+      </request>
+
+      <request name="cm_output">
+        <description summary="Request to calibrate/profile a given output">
+          A program sends this request to a compositor to calibrate a given output
+
+          A compositor can deny this request, in this case it should give an error as defined in the error enum
+        </description>
+        <arg name="id" type="new_id" interface="zcm_output_cal_v1" />
+        <arg name="output" type="object" interface="wl_output" />
+      </request>
+
+      <enum name="error">
+        <entry name="denied" value="0" summary="Given when the compositor denies cal/profiling access" />
+        <entry name="not_saved" value="1" summary="Afer calibration/profiling no profile or video card lut was saved" />
+      </enum>
+
+  </interface>
+
+  <interface name="zcm_output_cal_v1" version="1">
+    <description summary="Main calibration profiling interface">
+      With this interface an calibration/profiling application can send needed colors to the display, the compositors is responsible for placing the colors (with the help of the user since we can't know the physical location of the measurement device)
+    </description>
+
+    <enum name="bitdepth">
+      <entry name="8bit" value="0" summary="8 Bit display" />
+      <entry name="10bit" value="1" summary="10 Bit display" />
+      <entry name="12bit" value="2" summary="12 Bit display" />
+      <entry name="14bit" value="3" summary="14 Bit display" />
+    </enum>
+
+    <event name="display_depth">
+      <description summary="Event send to inform application of display depth"/>
+      <arg name="depth" type="uint" enum="bitdepth" />
+    </event>
+
+    <request name="set_color">
+      <description summary="Request a color to be set to an area within output">
+        This request is semd to set a specific color to an output, this color needs to be pushed to the screen as directly as possible (unless the bool use_profile is true and with the exception of the HW LUT of the graphics card or display itself) and preferably on top of everything else. The compositor is responsible to place the output area inside the output.
+      </description>
+      <arg name="red" type="uint" summary="Red component of color, only least significant n bit are used where n depends on bitdepth of display" />
+      <arg name="green" type="uint" summary="Green component of color, only least significant n bit are used where n depends on bitdepth of display" />
+      <arg name="blue" type="uint" summary="Blue component of color, only least significant n bit are used where n depends on bitdepth of display" />
+      <arg name="use_profile" type="bool" allow-null="true" summary="If profile should be applied, used to verify profile. If not set assume false"/>
+    </request>
+
+    <request name="load_profile">
+      <description summary="Load a given profile including VCGT">
+        USed to load a given ICC profile a compositor should also apply VCGT to video card LUT. If this interface is destroyed without saving compositor should restore previous settings
+      </description>
+      <arg name="profile" type="fd" summary="file descriptor to ICC profile"/>
+    </request>
+
+    <request name="save" type="destructor">
+      <decsription summary="Last profile loaded should be saved">
+        Send this to save the last profile loaded, compositor is allowed to check this profile and deny the reqest (see error enum in manager interface). irregardless of if profile gets saved or not this will destroy this interface. If not saved compositor should restore previous settings.
+      </description>
+    </reqest>
+
+    <request name="desstroy" type="destructor">
+      <description summary="Destroy object without saving" />
+    </request>
+
+  </interface>
+
+
+</protocol>
