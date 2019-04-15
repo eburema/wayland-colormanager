@@ -52,10 +52,16 @@
         <arg name="output" type="object" interface="wl_output" />
       </request>
 
-      <enum name="error">
-        <entry name="denied" value="0" summary="Given when the compositor denies cal/profiling access" />
+      <enum name="exceptions">
+        <entry name="not_supported" value="0" summary="Output doesn't suport calibration profiling" />
         <entry name="not_saved" value="1" summary="Afer calibration/profiling no profile or video card lut was saved" />
       </enum>
+      
+      <event name="exception">
+          <description summary="A runtime error happened see exceptions enum for more info"/>
+          <arg name="error" type="uint" enum="exceptions" />
+          <arg name="reason" type="string" summary="Short human readable description of error" />
+      </event>
 
   </interface>
 
