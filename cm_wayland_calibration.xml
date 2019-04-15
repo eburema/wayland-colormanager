@@ -90,7 +90,6 @@
       <arg name="red" type="uint" summary="Red component of color, only least significant n bit are used where n depends on bitdepth of display" />
       <arg name="green" type="uint" summary="Green component of color, only least significant n bit are used where n depends on bitdepth of display" />
       <arg name="blue" type="uint" summary="Blue component of color, only least significant n bit are used where n depends on bitdepth of display" />
-      <arg name="use_profile" type="bool" allow-null="true" summary="If profile should be applied, used to verify profile. If not set assume false"/>
     </request>
 
     <request name="load_profile">
