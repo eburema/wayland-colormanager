@@ -55,6 +55,7 @@
       <enum name="exceptions">
         <entry name="not_supported" value="0" summary="Output doesn't suport calibration profiling" />
         <entry name="not_saved" value="1" summary="Afer calibration/profiling no profile or video card lut was saved" />
+        <entry name="user_cancled" value="3" summary="User cancled calibration"/>
       </enum>
       
       <event name="exception">
@@ -96,6 +97,7 @@
       <arg name="red" type="uint" summary="Red component of color, only least significant n bit are used where n depends on bitdepth of display" />
       <arg name="green" type="uint" summary="Green component of color, only least significant n bit are used where n depends on bitdepth of display" />
       <arg name="blue" type="uint" summary="Blue component of color, only least significant n bit are used where n depends on bitdepth of display" />
+      <arg name="callback" type="new_id" interface="wl_callback" summary="Callback will fire when compositor finishes setting color specified" />
     </request>
 
     <request name="load_profile">
