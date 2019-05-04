@@ -193,6 +193,8 @@
 
       The 16bit integers will be scaled to the output LUT size, effectively making
       the output size determine the step size of the 16bit integers.
+
+      In case there is no LUT the no_LUT event will be provided.
     </description>
 
     <request name="destroy" type="destructor">
@@ -201,7 +203,9 @@
       </description>
     </request>
 
-    <event name="LUT data">
+    <event name="no_LUT" />
+
+    <event name="LUT_data">
       <description summary="fd to shared memory">
         This event will be fired on creating a zwp_cm_lute and will provide a
         file descriptor the the shared memory provided for storing a LUT
