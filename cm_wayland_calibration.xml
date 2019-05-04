@@ -26,8 +26,9 @@
 
   <interface name="zwp_calibration_manager_v1" version="1">
       <description summary="Manager object for profiling/calibration of displays">
-          With this interface a compositor can announce calibration/profiling 
-          support so a software can calibrate the display
+          With this interface a compositor can announce calibration/profiling
+          support so a software can calibrate the display. This protocol should
+          be priviliged.
 
           Currently this is just a sketch for a proposal
 
@@ -40,24 +41,29 @@
         </description>
       </request>
 
-      <request name="cm_output">
+      <request name="cm_profile">
         <description summary="Request to calibrate/profile a given output">
-          A program sends this request to a compositor to calibrate a given 
-          output
+          A program sends this request to a compositor to calibrate/profile a
+          given output, it will use the provided surface to display the
+          profile/calibration data and potentially user assistance information.
 
-          A compositor can deny this request, in this case it should give an 
-          error as defined in the error enum
+          A compositor can deny this request (for example when the output is in
+          use by another full screen application or when in an HDR state that
+          can't be calibrated/profiled), in this case it should give an error as
+           defined in the exception enum and the first event of the calibration
+           object must be a cancled event.
         </description>
         <arg name="id" type="new_id" interface="zwp_output_cal_v1" />
+        <arg name="surface" type="object" interface="wl_surface" />
         <arg name="output" type="object" interface="wl_output" />
       </request>
 
       <enum name="exceptions">
-        <entry name="not_supported" value="0" summary="Output doesn't suport calibration profiling" />
+        <entry name="not_supported" value="0" summary="Output doesn't suport calibration/profiling" />
         <entry name="not_saved" value="1" summary="Afer calibration/profiling no profile or video card lut was saved" />
         <entry name="user_cancled" value="3" summary="User cancled calibration"/>
       </enum>
-      
+
       <event name="exception">
           <description summary="A runtime error happened see exceptions enum for more info"/>
           <arg name="error" type="uint" enum="exceptions" />
@@ -68,52 +74,106 @@
 
   <interface name="zwp_output_cal_v1" version="1">
     <description summary="Main calibration profiling interface">
-      With this interface an calibration/profiling application can send needed 
-      colors to the display, the compositors is responsible for placing the colors 
-      (with the help of the user since we can't know the physical location of the 
-      measurement device)
+      This is the interface that the calibrator/profiler will use to actually
+      calibrate/profile a screen. The buffer of the attached surface will be
+      displayed above everything else in full screen and the compositor should
+      disable any DPMS/screensaver. Locking is still allowed so long as the Lock
+      screen is not displayed on top of the calibration surface.
+
+      The surface will be displayed as if it was in the display color space. So
+      the compositor CMM should at most do an identy transform or blit the buffer
+      as directly to the screen as possible (depending on how the compositor
+      normally operates with surfaces in the display color space)
+
+      The compositor is allowed to stop the process at any time by sending a
+      cancled event. In this case the surface will be unmapped any calibration
+      done will be undone and no further events will be sent nor any request
+      honered. The application should destroy this interface in that case.
     </description>
 
     <enum name="bitdepth">
-      <entry name="8bit" value="0" summary="8 Bit display" />
-      <entry name="10bit" value="1" summary="10 Bit display" />
-      <entry name="12bit" value="2" summary="12 Bit display" />
-      <entry name="14bit" value="3" summary="14 Bit display" />
+      <entry name="NA" value="0" summary="Not used (only valid for Gamma_in/out)" />
+      <entry name="8bit" value="1" summary="8 Bit display" />
+      <entry name="10bit" value="2" summary="10 Bit display" />
+      <entry name="12bit" value="3" summary="12 Bit display" />
+      <entry name="14bit" value="4" summary="14 Bit display" />
     </enum>
 
-    <event name="display_depth">
-      <description summary="Event send to inform application of display depth"/>
-      <arg name="depth" type="uint" enum="bitdepth" />
+    <event name="display_config">
+      <description summary="Event send to inform application of display depth">
+        This event will be fired on creation of an wp_output_cal object;
+        providing the calibration program the nescary information for
+        calibrating/profiling the screen.
+
+        NOTE: If the compositor is using a shader for the LUT/gamma table it is
+        free to set anything for the Gamma_in/out. If using the video card LUT
+        it should provide the size of that LUT.
+
+        In some cases LUT/gamma tables are not provided (e.g. some display HW
+        has only 1 shared over all displays so only the main display can be
+        calibrated)
+
+        The client must obey the size exactly on the next commit with a wl_buffer.
+      </description>
+      <arg name="depth" type="uint" enum="bitdepth" summary="Current display bit depth" />
+      <arg name="Gamma_in" type="uint" enum="bitdepth" summary="Input size of LUT/Gamma table" />
+      <arg name="Gamma_out" type="uint" enum="bitdepth" summary="Output size of LUT/Gamma table" />
+      <arg name="width" type="uint" summary="widht of output in pixels" />
+      <arg name="height" type="uint" summary="height of output in pixels" />
     </event>
 
-    <request name="set_color">
-      <description summary="Request a color to be set to an area within output">
-        This request is semd to set a specific color to an output, this color 
-        needs to be pushed to the screen as directly as possible (unless the bool 
-        use_profile is true and with the exception of the HW LUT of the graphics card or 
-        display itself) and preferably on top of everything else. The compositor is 
-        responsible to place the output area inside the output.
+    <event name="cancled">
+      <description summary="Event sent in case calibration is cancled/aborted">
+        This events denotes that the calibration is aborted/cancled or (in the
+        case this is the first event) the calibration can't start.
       </description>
-      <arg name="red" type="uint" summary="Red component of color, only least significant n bit are used where n depends on bitdepth of display" />
-      <arg name="green" type="uint" summary="Green component of color, only least significant n bit are used where n depends on bitdepth of display" />
-      <arg name="blue" type="uint" summary="Blue component of color, only least significant n bit are used where n depends on bitdepth of display" />
-      <arg name="callback" type="new_id" interface="wl_callback" summary="Callback will fire when compositor finishes setting color specified" />
+    </event>
+
+    <request name="id_lut">
+      <description summary="Request to create an identy LUT of right size for this output"/>
+      <arg name="lut" type="new_id" interface="zwp_cm_lut" summary="object holding the id LUT" />
+    </request>
+
+
+    <reqest name="get_lut">
+      <description summary="Get the current LUT">
+        With this request a program can gets a copy of the current loaded LUT
+      </description>
+      <arg name="lut" type="new_id" interface="zwp_cm_lut" summary="Object describing a LUT"/>
+    </request>
+
+    <request name="load_lut">
+      <description summary="Request to load a new LUT">
+        To setup a new LUT, this is traditionally loaded in either the Video
+        card LUT/Gamma table. But a compositor is free to use a shader instead.
+
+        This request will only be honered if the Gamma_in/out are actually
+        provided.
+      </description>
+      <arg name="lut" type="object" interface="zwp_cm_lut" summary="Object providing a LUT" />
+      <arg name="callback" type="new_id" interface="wl_callback" summary="callback that will fire when callibration curve is loaded" />
     </request>
 
     <request name="load_profile">
       <description summary="Load a given profile including VCGT">
-        USed to load a given ICC profile a compositor should also apply VCGT to 
-        video card LUT. If this interface is destroyed without saving compositor should 
+        USed to load a given ICC profile a compositor should also apply the VCGT
+        if provided, traditionally this is done wiht the video card LUT/Gamma
+        table but a compositor is free to do it in a shader so long as it is
+        done after any of the CMM transforms (as the last step before pushing
+        to the screen).
+
+        If this interface is destroyed without saving compositor should
         restore previous settings
       </description>
       <arg name="profile" type="fd" summary="file descriptor to ICC profile"/>
+      <arg name="callback" type="new_id" summary="callback that will fire when profile is loaded" />
     </request>
 
     <request name="save" type="destructor">
       <decsription summary="Last profile loaded should be saved">
-        Send this to save the last profile loaded, compositor is allowed to 
-        check this profile and deny the reqest (see error enum in manager interface). 
-        irregardless of if profile gets saved or not this will destroy this interface. 
+        Send this to save the last profile loaded, compositor is allowed to
+        check this profile and deny the reqest (see error enum in manager interface).
+        irregardless of if profile gets saved or not this will destroy this interface.
         If not saved compositor should restore previous settings.
       </description>
     </reqest>
@@ -124,5 +184,31 @@
 
   </interface>
 
+  <interface name="zwp_cm_lut" version="1">
+    <description summary="Object for holding calibration LUT data">
+      The compositor will create an ammount of shared memory that will hold the
+      LUT data. It will be in a format of an array of unsigned 16 bit integers
+      (little endian), with a lenght of 3x the LUT input size. The red, green and
+      blue information will be stored interlaced (so R1,G1,B1,R2,G2,B2,etc).
+
+      The 16bit integers will be scaled to the output LUT size, effectively making
+      the output size determine the step size of the 16bit integers.
+    </description>
+
+    <request name="destroy" type="destructor">
+      <description summary="Destroy the LUT">
+        Destroy the LUT and any associated data
+      </description>
+    </request>
+
+    <event name="LUT data">
+      <description summary="fd to shared memory">
+        This event will be fired on creating a zwp_cm_lute and will provide a
+        file descriptor the the shared memory provided for storing a LUT
+      </description>
+      <arg name="shm" type="fd" />
+    </event>
+
+  </interface>
 
 </protocol>
