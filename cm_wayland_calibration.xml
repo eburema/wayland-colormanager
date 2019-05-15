@@ -195,7 +195,8 @@
       The 16bit integers will be scaled to the output LUT size, effectively making
       the output size determine the step size of the 16bit integers.
 
-      In case there is no LUT the no_LUT event will be provided.
+      In case there is no LUT the no_LUT event will be provided. The client is
+      then supposed to destroy this object.
     </description>
 
     <request name="destroy" type="destructor">
