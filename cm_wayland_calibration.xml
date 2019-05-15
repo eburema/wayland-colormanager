@@ -62,6 +62,7 @@
         <entry name="not_supported" value="0" summary="Output doesn't suport calibration/profiling" />
         <entry name="not_saved" value="1" summary="Afer calibration/profiling no profile or video card lut was saved" />
         <entry name="user_cancled" value="3" summary="User cancled calibration"/>
+        <entry name="output_in_use" value="4" summary="Output in use by other callibration and/or fullscreen application" />
       </enum>
 
       <event name="exception">
@@ -212,6 +213,13 @@
       </description>
       <arg name="shm" type="fd" />
     </event>
+
+    <request name="set_new_LUT">
+      <description summary="set a new LUT">
+        Provide a new LUT in described format
+      </description>
+      <arg name="shm" type="fd" />
+    </request>
 
   </interface>
 
